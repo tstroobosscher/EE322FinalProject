@@ -17,6 +17,9 @@ import soundfile as sf
 import asyncio
 import queue
 
+global_azimuth = 0
+global_elevation = 0
+
 def read_dat(side, elevation, azimuth):
   """
   @brief      { Reads am hrtf file for a given direction if one exists }
@@ -109,7 +112,7 @@ def get_closest_key(keys, target):
   	key=lambda k: abs(k - target)
   )
 
-def convolve_stereo(data, hrtf, elevation, azimuth):
+def convolve_stereo(data, hrtf, elevation, azimuth, mode = 'valid'):
   """
   @brief      { performs the Fast Fourier Transform on the given array }
 
@@ -142,31 +145,72 @@ def convolve_stereo(data, hrtf, elevation, azimuth):
 
   left = fftconvolve(
   	data, 
-  	hrtf['L'][actual_elevation][actual_azimuth]
+  	hrtf['L'][actual_elevation][actual_azimuth],
+  	mode = mode
   )
   right = fftconvolve(
   	data, 
-  	hrtf['R'][actual_elevation][actual_azimuth]
+  	hrtf['R'][actual_elevation][actual_azimuth],
+  	mode = mode
   )
   stereo = np.transpose([left, right])
   return stereo
 
-async def generate_stream(blocksize, *, channels):
+async def stream_generator(blocksize, *, channels=2, dtype='float32',
+                           pre_fill_blocks=10, **kwargs):
+    """Generator that yields blocks of input/output data as NumPy arrys.
 
-  assert blocksize > 0
-  input_queue = asyncio.Queue()
-  output_queue = queue.Queue()
-  loop = asyncio.get_event_loop()
+    The output blocks are uninitialized and have to be filled with
+    appropriate audio signals.
+    
+    """
+    assert blocksize != 0
+    q_in = asyncio.Queue()
+    q_out = queue.Queue()
+    loop = asyncio.get_event_loop()
 
-  return
+    def callback(indata, outdata, frame_count, time_info, status):
+        loop.call_soon_threadsafe(q_in.put_nowait, (indata.copy(), status))
+        outdata[:] = q_out.get_nowait()
 
-def main():
-  print("Hello World!")
+    # pre-fill output queue
+    for _ in range(pre_fill_blocks):
+        q_out.put(np.zeros((blocksize, channels), dtype=dtype))
+
+    stream = sd.Stream(blocksize=blocksize, callback=callback, dtype=dtype,
+                       channels=channels, **kwargs)
+    with stream:
+        while True:
+            indata, status = await q_in.get()
+            outdata = np.empty((blocksize, channels), dtype=dtype)
+            yield indata, outdata, status
+            q_out.put_nowait(outdata)
+
+async def wire_coro(hrtf, **kwargs):
+    """Create a connection between audio inputs and outputs.
+
+    Asynchronously iterates over a stream generator and for each block
+    simply copies the input data into the output block.
+
+    """
+    async for indata, outdata, status in stream_generator(**kwargs):
+        if status:
+            print(status)
+        convolution = convolve_stereo(indata[:, 0], hrtf, global_elevation, global_azimuth, 'same')
+        outdata[:] = convolution
+
+
+async def main(**kwargs):
   hrtf = load_hrtf()
-  data, fs = sf.read("dryspeech.wav")
-  stereo = convolve_stereo(data, hrtf, 90, 48)
-  sd.play(stereo, fs)
-  sd.wait()
+  audio_task = asyncio.create_task(wire_coro(hrtf, **kwargs))
+  for i in range(20, 0, -1):
+    print(i)
+    await asyncio.sleep(1)
+  audio_task.cancel()
+  try:
+    await audio_task
+  except asyncio.CancelledError:
+    print('wire was cancelled')
 
 if __name__ == "__main__":
-  main()
+  asyncio.run(main(blocksize = 1024, channels = 2))
