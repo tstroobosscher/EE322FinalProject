@@ -113,6 +113,16 @@ def convolve_stereo(data, hrtf, elevation, azimuth):
 
   @return     { stereo matrix ready to be played }
   """
+  if elevation > 90:
+  	elevation = 90
+  elif elevation < -40:
+  	elevation = -40
+
+  if azimuth < 0:
+  	while azimuth < 0:
+  	  azimuth = azimuth + 360
+
+  azimuth = azimuth % 360
 
   actual_elevation = get_closest_key(
   	hrtf['L'].keys(), 
@@ -138,7 +148,7 @@ def main():
   print "Hello World!"
   hrtf = load_hrtf()
   data, fs = sf.read("dryspeech.wav")
-  stereo = convolve_stereo(data, hrtf, 11, 0)
+  stereo = convolve_stereo(data, hrtf, 11, 48)
   sd.play(stereo, fs)
   sd.wait()
 
