@@ -16,7 +16,7 @@ import soundfile as sf
 
 def read_dat(side, elevation, azimuth):
   """
-  @brief      Reads am hrtf file for a given direction if one exists
+  @brief      { Reads am hrtf file for a given direction if one exists }
 
   @param      side       L / R
   @param      elevation  -40 to +90 by increments of 10
@@ -48,7 +48,7 @@ def read_dat(side, elevation, azimuth):
 
 def load_hrtf():
   """
-  @brief      Loads all the hrtfs available
+  @brief      { Loads all the hrtfs available }
 
   @return     { 
     data structure for HRTF data:
@@ -94,12 +94,12 @@ def load_hrtf():
 
 def get_closest_key(keys, target):
   """
-  @brief      Gets the closest key.
+  @brief      { Gets the closest key }
   
   @param      keys    The keys
   @param      target  The target
   
-  @return     The closest key.
+  @return     { The closest key }
   """
   return target if target in keys else min(
   	keys, 
@@ -127,6 +127,7 @@ def convolve_stereo(data, hrtf, elevation, azimuth):
 
   azimuth = azimuth % 360
 
+  # the layout for L and R are the same
   actual_elevation = get_closest_key(
   	hrtf['L'].keys(), 
   	elevation
