@@ -83,9 +83,12 @@ def load_hrtf():
   hrtf['R'] = dict()
   for side in hrtf.keys():
     for elevation in range(-40, 90, 10):
+      #  all of the elevations are there, just the azimuths get cut off
       hrtf[side][elevation] = dict()
       for azimuth in range(0, 355, 5):
-        hrtf[side][elevation][azimuth] = read_dat(side, elevation, azimuth)
+        response = read_dat(side, elevation, azimuth)
+        if response is not None:
+          hrtf[side][elevation][azimuth] = response
 
   return hrtf
 
@@ -148,7 +151,7 @@ def main():
   print "Hello World!"
   hrtf = load_hrtf()
   data, fs = sf.read("dryspeech.wav")
-  stereo = convolve_stereo(data, hrtf, 11, 48)
+  stereo = convolve_stereo(data, hrtf, 90, 48)
   sd.play(stereo, fs)
   sd.wait()
 
