@@ -1,7 +1,12 @@
+altgraph==0.16.1
 cffi==1.12.2
+future==0.17.1
+macholib==1.11
 numpy==1.16.2
+pefile==2018.8.8
 pkg-resources==0.0.0
 pycparser==2.19
+PyInstaller==3.4
 scipy==1.2.1
 sounddevice==0.3.13
 SoundFile==0.10.2

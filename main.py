@@ -4,15 +4,18 @@
 #
 ###############################################################################
 
-from struct import unpack
 from scipy.io import wavfile
 from scipy.signal import fftconvolve
 from time import sleep
+from struct import unpack
 import os
 import wave
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
+
+import asyncio
+import queue
 
 def read_dat(side, elevation, azimuth):
   """
@@ -148,8 +151,17 @@ def convolve_stereo(data, hrtf, elevation, azimuth):
   stereo = np.transpose([left, right])
   return stereo
 
+async def generate_stream(blocksize, *, channels):
+
+  assert blocksize > 0
+  input_queue = asyncio.Queue()
+  output_queue = queue.Queue()
+  loop = asyncio.get_event_loop()
+
+  return
+
 def main():
-  print "Hello World!"
+  print("Hello World!")
   hrtf = load_hrtf()
   data, fs = sf.read("dryspeech.wav")
   stereo = convolve_stereo(data, hrtf, 90, 48)
