@@ -10,6 +10,7 @@ from time import sleep
 from struct import unpack
 import os
 import wave
+import math
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
@@ -17,28 +18,19 @@ import soundfile as sf
 import asyncio
 import queue
 
-global_azimuth = 0
+global_azimuth = 90
 global_elevation = 0
 
-def read_dat(side, elevation, azimuth):
-  """
-  @brief      { Reads am hrtf file for a given direction if one exists }
-
-  @param      side       L / R
-  @param      elevation  -40 to +90 by increments of 10
-  @param      azimuth    0 to 355 by increments of 5
-
-  @return     { returns an array of the transfer data or None if one is not available }
-  """
-  dat = list()
-
-  path = "full/elev{:01d}/{:s}{:01d}e{:03d}a.dat".format(
-  	elevation, 
-  	side, 
-  	elevation, 
-  	azimuth
+def get_transfer_path(side, elevation, azimuth):
+  return "full/elev{:01d}/{:s}{:01d}e{:03d}a.dat".format(
+    elevation, 
+    side,
+    elevation, 
+    azimuth
   )
 
+def get_transfer_data(path):
+  dat = list()
   if not os.path.exists(path):
     return None
   else:
@@ -50,7 +42,30 @@ def read_dat(side, elevation, azimuth):
           dat.append(float(unpack("!h", short)[0]) / 32768)
         else:
           break
+  
   return np.array(dat)
+
+def read_dat(elevation, azimuth):
+  """
+  @brief      { Reads am hrtf file for a given direction if one exists }
+
+  @param      elevation  -40 to +90 by increments of 10
+  @param      azimuth    0 to 355 by increments of 5
+
+  @return     { returns an 2-array of the transfer data or None if one is not available }
+  """
+
+  left_impulse = get_transfer_data(
+    get_transfer_path('L', elevation, azimuth)
+  )
+  right_impulse = get_transfer_data(
+    get_transfer_path('R', elevation, azimuth)
+  )
+  
+  if left_impulse is None or right_impulse is None:
+  	return None
+
+  return np.transpose(np.array([left_impulse, right_impulse]))
 
 def load_hrtf():
   """
@@ -64,9 +79,9 @@ def load_hrtf():
     3D array of key value pairs:
  
     HRTF = {
-      L: {
+      {
         -40 : {
-          0 : list(data),
+          0 : 2-array,
           .
           .
           .
@@ -75,26 +90,17 @@ def load_hrtf():
       .
       .
       },
-      R: {
-        .
-        .
-        .
-      }
     }
- 
   }
   """
   hrtf = dict()
-  hrtf['L'] = dict()
-  hrtf['R'] = dict()
-  for side in hrtf.keys():
-    for elevation in range(-40, 90, 10):
-      #  all of the elevations are there, just the azimuths get cut off
-      hrtf[side][elevation] = dict()
-      for azimuth in range(0, 355, 5):
-        response = read_dat(side, elevation, azimuth)
-        if response is not None:
-          hrtf[side][elevation][azimuth] = response
+  for elevation in range(-40, 90, 10):
+    #  all of the elevations are there, just the azimuths get cut off
+    hrtf[elevation] = dict()
+    for azimuth in range(0, 355, 5):
+      response = read_dat(elevation, azimuth)
+      if response is not None:
+        hrtf[elevation][azimuth] = response
 
   return hrtf
 
@@ -135,26 +141,19 @@ def convolve_stereo(data, hrtf, elevation, azimuth, mode = 'valid'):
 
   # the layout for L and R are the same
   actual_elevation = get_closest_key(
-  	hrtf['L'].keys(), 
+  	hrtf.keys(), 
   	elevation
   )
   actual_azimuth = get_closest_key(
-  	hrtf['L'][actual_elevation].keys(), 
+  	hrtf[actual_elevation].keys(), 
   	azimuth
   )
 
-  left = fftconvolve(
+  return fftconvolve(
   	data, 
-  	hrtf['L'][actual_elevation][actual_azimuth],
+  	hrtf[actual_elevation][actual_azimuth],
   	mode = mode
   )
-  right = fftconvolve(
-  	data, 
-  	hrtf['R'][actual_elevation][actual_azimuth],
-  	mode = mode
-  )
-  stereo = np.transpose([left, right])
-  return stereo
 
 async def stream_generator(blocksize, *, channels=2, dtype='float32',
                            pre_fill_blocks=10, **kwargs):
@@ -187,25 +186,28 @@ async def stream_generator(blocksize, *, channels=2, dtype='float32',
             q_out.put_nowait(outdata)
 
 async def wire_coro(hrtf, **kwargs):
-    """Create a connection between audio inputs and outputs.
+  """Create a connection between audio inputs and outputs.
 
-    Asynchronously iterates over a stream generator and for each block
-    simply copies the input data into the output block.
+  Asynchronously iterates over a stream generator and for each block
+  simply copies the input data into the output block.
 
-    """
-    async for indata, outdata, status in stream_generator(**kwargs):
-        if status:
-            print(status)
-        convolution = convolve_stereo(indata[:, 0], hrtf, global_elevation, global_azimuth, 'same')
-        outdata[:] = convolution
+  """
+
+  async for indata, outdata, status in stream_generator(**kwargs):
+    if status:
+      print(status)
+    convolution = convolve_stereo(indata, hrtf, global_elevation, global_azimuth, 'same')
+    outdata[:] = convolution
 
 
 async def main(**kwargs):
+  index = 0
   hrtf = load_hrtf()
   audio_task = asyncio.create_task(wire_coro(hrtf, **kwargs))
-  for i in range(20, 0, -1):
-    print(i)
-    await asyncio.sleep(1)
+  while True:
+  	global_azimuth = math.floor(360* math.sin(index / (2 * math.pi)))
+  	index += 1
+  	await asyncio.sleep(1)
   audio_task.cancel()
   try:
     await audio_task
@@ -213,4 +215,4 @@ async def main(**kwargs):
     print('wire was cancelled')
 
 if __name__ == "__main__":
-  asyncio.run(main(blocksize = 1024, channels = 2))
+  asyncio.run(main(blocksize = 2048, channels = 2))
