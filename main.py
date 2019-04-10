@@ -18,7 +18,7 @@ import soundfile as sf
 import asyncio
 import queue
 
-global_azimuth = 90
+global_azimuth = 0
 global_elevation = 0
 
 def get_transfer_path(side, elevation, azimuth):
@@ -203,16 +203,16 @@ async def wire_coro(hrtf, **kwargs):
 async def main(**kwargs):
   index = 0
   hrtf = load_hrtf()
-  audio_task = asyncio.create_task(wire_coro(hrtf, **kwargs))
-  while True:
-  	global_azimuth = math.floor(360* math.sin(index / (2 * math.pi)))
-  	index += 1
-  	await asyncio.sleep(1)
-  audio_task.cancel()
-  try:
-    await audio_task
-  except asyncio.CancelledError:
-    print('wire was cancelled')
+  # audio_task = asyncio.create_task(wire_coro(hrtf, **kwargs))
+  # while True:
+  # 	global_azimuth = math.floor(360* math.sin(index / (2 * math.pi)))
+  # 	index += 1
+  # 	await asyncio.sleep(1)
+  # audio_task.cancel()
+  # try:
+  #   await audio_task
+  # except asyncio.CancelledError:
+  #   print('wire was cancelled')
 
 if __name__ == "__main__":
-  asyncio.run(main(blocksize = 2048, channels = 2))
+  asyncio.run(main(blocksize = 1024, channels = 2))
