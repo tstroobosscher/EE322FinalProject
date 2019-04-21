@@ -75,5 +75,4 @@ def main(stdscr):
 
   curses.endwin()
 
-
 curses.wrapper(main)
