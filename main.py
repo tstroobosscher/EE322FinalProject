@@ -172,6 +172,10 @@ def main(stdscr):
 
   trial_1_source = list()
   trial_1_resp = list()
+  trial_2_source = list()
+  trial_2_resp = list()
+  trial_3_source = list()
+  trial_3_resp = list()
 
   selected = 0
 
@@ -182,7 +186,7 @@ def main(stdscr):
 
   #############################################################################
   #
-  # Part 1 - Ping from random locations, record results
+  # Part 0 - Intro
   #
   #############################################################################
 
@@ -191,26 +195,26 @@ def main(stdscr):
   text.append("Move cursor with the arrow keys")
   text.append("0 degrees is directly in front of you")
   text.append("180 degrees is directly behind you")
-  text.append("Locate the direction of the ping as best you can")
-  text.append("Press 'Enter' when you are done")
+  text.append("Hover the cursor over the number and")
+  text.append("press 'Enter' to select")
 
   for index, line in enumerate(text):
     stdscr.addstr(
-      center_y/2 - len(text)/2 + index, 
-      center_x/2 - len(line)/2, 
+      center_y/2 - int(math.ceil(len(text)/2)) + index,
+      center_x/2 - int(math.ceil(len(line)/2)),
       line
     )
 
   ready = "Ready? "
   stdscr.addstr(
-    center_y/2 + len(text)/2, 
-    center_x/2 - len(ready)/2,
+    center_y/2 + int(math.ceil(len(text)/2)), 
+    center_x/2 - int(math.ceil(len(ready)/2)),
     ready 
   )
   enter = "[ENTER]"
   stdscr.addstr(
-    center_y/2 + len(text)/2, 
-    center_x/2 + len(ready)/2,
+    center_y/2 + int(math.ceil(len(text)/2)), 
+    center_x/2 + int(math.ceil(len(ready)/2)),
     enter,
     curses.A_BLINK | curses.A_REVERSE
   )
@@ -230,8 +234,100 @@ def main(stdscr):
     if ch == curses.KEY_ENTER or ch == ord('\r') or ch == ord('\n'):
       enter_clear = "       "
       stdscr.addstr(
-        center_y/2 + len(text)/2, 
-        center_x/2 + len(ready)/2,
+        center_y/2 + int(math.ceil(len(text)/2)), 
+        center_x/2 + int(math.ceil(len(ready)/2)),
+        enter_clear,
+        curses.A_NORMAL
+      )
+      break
+
+    elif ch == curses.KEY_RIGHT:
+      if selected == 90:
+        continue
+      elif selected > 270 or selected < 90:
+        selected += 10
+      else:
+        selected -= 10
+
+    elif ch == curses.KEY_LEFT:
+      if selected == 270:
+        continue
+      if selected > 270 or selected < 90:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_UP:
+      if selected == 0:
+        continue
+      if selected < 180:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_DOWN:
+      if selected == 180:
+        continue
+      if selected < 180:
+        selected += 10
+      else:
+        selected -= 10
+
+    if selected == 360:
+      selected = 0
+    elif selected == -10:
+      selected = 350
+
+  #############################################################################
+  #
+  # Part 1 - Ping from random locations, record results
+  #
+  #############################################################################
+  
+  stdscr.clear()
+
+  text = list()
+  text.append("Set 1: Best Guess")
+  text.append("Locate the direction of the ping as best you can")
+
+  for index, line in enumerate(text):
+    stdscr.addstr(
+      center_y/2 - int(math.ceil(len(text)/2)) + index,
+      center_x/2 - int(math.ceil(len(line)/2)),
+      line
+    )
+
+  ready = "Ready? "
+  stdscr.addstr(
+    center_y/2 + int(math.ceil(len(text)/2)), 
+    center_x/2 - int(math.ceil(len(ready)/2)),
+    ready 
+  )
+  enter = "[ENTER]"
+  stdscr.addstr(
+    center_y/2 + int(math.ceil(len(text)/2)), 
+    center_x/2 + int(math.ceil(len(ready)/2)),
+    enter,
+    curses.A_BLINK | curses.A_REVERSE
+  )
+
+  while True:
+    for deg in range(0, 360, 10):
+        add_circle_point(
+          stdscr, 
+          str(deg), 
+          deg,
+          min(center_y, center_x)/2,
+          curses.A_REVERSE if deg == selected else curses.A_NORMAL
+        )
+
+    ch = stdscr.getch()
+    
+    if ch == curses.KEY_ENTER or ch == ord('\r') or ch == ord('\n'):
+      enter_clear = "       "
+      stdscr.addstr(
+        center_y/2 + int(math.ceil(len(text)/2)), 
+        center_x/2 + int(math.ceil(len(ready)/2)),
         enter_clear,
         curses.A_NORMAL
       )
@@ -278,8 +374,8 @@ def main(stdscr):
     for index in range(5, -1, -1):
       countdown = "Ping in {}".format(index)
       stdscr.addstr(
-        center_y/2 + len(text)/2, 
-        center_x/2 - len(countdown)/2, 
+        center_y/2 + int(math.ceil(len(text)/2)), 
+        center_x/2 - int(math.ceil(len(countdown)/2)),
         countdown
       )
       stdscr.refresh()
@@ -349,17 +445,473 @@ def main(stdscr):
 
     trial_1_resp.append(selected)
 
-    # add_circle_point(
-    #   stdscr, 
-    #   "*", 
-    #   90, 
-    #   min(center_y, center_x)/2 - 2, 
-    #   curses.color_pair(1)
-    # )
+  #############################################################################
+  #
+  # Part 2 - Ping from random locations, notify the player, record results
+  #
+  #############################################################################
+
+  stdscr.clear()
+
+  text = list()
+  text.append("Set 2: Training")
+  text.append("A red asterisk (*) will be shown")
+  text.append("to indicate where the ping is coming from")
+  text.append("Important: The red asterisk may not represent")
+  text.append("exactly where you hear it from")
+  text.append("Locate the direction of the ping as best you can")
+
+  for index, line in enumerate(text):
+    stdscr.addstr(
+      center_y/2 - int(math.ceil(len(text)/2)) + index, 
+      center_x/2 - int(math.ceil(len(line)/2)), 
+      line
+    )
+
+  ready = "Ready? "
+  stdscr.addstr(
+    center_y/2 + int(math.ceil(len(text)/2)), 
+    center_x/2 - int(math.ceil(len(ready)/2)),
+    ready 
+  )
+  enter = "[ENTER]"
+  stdscr.addstr(
+    center_y/2 + int(math.ceil(len(text)/2)), 
+    center_x/2 + int(math.ceil(len(ready)/2)),
+    enter,
+    curses.A_BLINK | curses.A_REVERSE
+  )
+
+  while True:
+    for deg in range(0, 360, 10):
+        add_circle_point(
+          stdscr, 
+          str(deg), 
+          deg,
+          min(center_y, center_x)/2,
+          curses.A_REVERSE if deg == selected else curses.A_NORMAL
+        )
+
+    ch = stdscr.getch()
+    
+    if ch == curses.KEY_ENTER or ch == ord('\r') or ch == ord('\n'):
+      enter_clear = "       "
+      stdscr.addstr(
+        center_y/2 + int(math.ceil(len(text)/2)), 
+        center_x/2 + int(math.ceil(len(ready)/2)),
+        enter_clear,
+        curses.A_NORMAL
+      )
+      break
+
+    elif ch == curses.KEY_RIGHT:
+      if selected == 90:
+        continue
+      elif selected > 270 or selected < 90:
+        selected += 10
+      else:
+        selected -= 10
+
+    elif ch == curses.KEY_LEFT:
+      if selected == 270:
+        continue
+      if selected > 270 or selected < 90:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_UP:
+      if selected == 0:
+        continue
+      if selected < 180:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_DOWN:
+      if selected == 180:
+        continue
+      if selected < 180:
+        selected += 10
+      else:
+        selected -= 10
+
+    if selected == 360:
+      selected = 0
+    elif selected == -10:
+      selected = 350
+
+  for trial in range(0, 10):
+    for index in range(5, -1, -1):
+      countdown = "Ping in {}".format(index)
+      stdscr.addstr(
+        center_y/2 + int(math.ceil(len(text)/2)), 
+        center_x/2 - int(math.ceil(len(countdown)/2)), 
+        countdown
+      )
+      stdscr.refresh()
+      sleep(1)
+
+    stdscr.refresh()
+
+    source = random.randrange(0, 360, 10)
+
+    trial_2_source.append(source)
+
+    add_circle_point(
+      stdscr, 
+      "*", 
+      source, 
+      min(center_y, center_x)/2 - 2, 
+      curses.color_pair(1)
+    )
+    stdscr.refresh()
+
+    stereo = convolve_stereo(data[:, 0], hrtf, 0, source)
+    sd.play(stereo, fs)
+    sd.wait()
+
+    while True:
+      for deg in range(0, 360, 10):
+        add_circle_point(
+          stdscr, 
+          str(deg), 
+          deg,
+          min(center_y, center_x)/2,
+          curses.A_REVERSE if deg == selected else curses.A_NORMAL
+        )
+
+      ch = stdscr.getch()
+      
+      if ch == curses.KEY_ENTER or ch == ord('\r') or ch == ord('\n'):
+        break
+
+      elif ch == curses.KEY_RIGHT:
+        if selected == 90:
+          continue
+        elif selected > 270 or selected < 90:
+          selected += 10
+        else:
+          selected -= 10
+
+      elif ch == curses.KEY_LEFT:
+        if selected == 270:
+          continue
+        if selected > 270 or selected < 90:
+          selected -= 10
+        else:
+          selected += 10
+
+      elif ch == curses.KEY_UP:
+        if selected == 0:
+          continue
+        if selected < 180:
+          selected -= 10
+        else:
+          selected += 10
+
+      elif ch == curses.KEY_DOWN:
+        if selected == 180:
+          continue
+        if selected < 180:
+          selected += 10
+        else:
+          selected -= 10
+
+      if selected == 360:
+        selected = 0
+      elif selected == -10:
+        selected = 350
+
+    trial_2_resp.append(selected)
+
+    add_circle_point(
+      stdscr, 
+      " ", 
+      source, 
+      min(center_y, center_x)/2 - 2,
+      curses.A_NORMAL
+    )
+    stdscr.refresh()
+
+  #############################################################################
+  #
+  # Part 3 - Ping from random locations, record results
+  #
+  #############################################################################
+  
+  stdscr.clear()
+
+  text = list()
+  text.append("Set 3: Training Results")
+  text.append("Now, there won't be any asterisk")
+  text.append("Locate the direction of the ping as best you can")
+
+  for index, line in enumerate(text):
+    stdscr.addstr(
+      center_y/2 - int(math.ceil(len(text)/2)) + index,
+      center_x/2 - int(math.ceil(len(line)/2)),
+      line
+    )
+
+  ready = "Ready? "
+  stdscr.addstr(
+    center_y/2 + int(math.ceil(len(text)/2)) + 1, 
+    center_x/2 - int(math.ceil(len(ready)/2)),
+    ready 
+  )
+  enter = "[ENTER]"
+  stdscr.addstr(
+    center_y/2 + int(math.ceil(len(text)/2)) + 1, 
+    center_x/2 + int(math.ceil(len(ready)/2)),
+    enter,
+    curses.A_BLINK | curses.A_REVERSE
+  )
+
+  while True:
+    for deg in range(0, 360, 10):
+        add_circle_point(
+          stdscr, 
+          str(deg), 
+          deg,
+          min(center_y, center_x)/2,
+          curses.A_REVERSE if deg == selected else curses.A_NORMAL
+        )
+
+    ch = stdscr.getch()
+    
+    if ch == curses.KEY_ENTER or ch == ord('\r') or ch == ord('\n'):
+      enter_clear = "       "
+      stdscr.addstr(
+        center_y/2 + int(math.ceil(len(text)/2)) + 1, 
+        center_x/2 + int(math.ceil(len(ready)/2)),
+        enter_clear,
+        curses.A_NORMAL
+      )
+      break
+
+    elif ch == curses.KEY_RIGHT:
+      if selected == 90:
+        continue
+      elif selected > 270 or selected < 90:
+        selected += 10
+      else:
+        selected -= 10
+
+    elif ch == curses.KEY_LEFT:
+      if selected == 270:
+        continue
+      if selected > 270 or selected < 90:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_UP:
+      if selected == 0:
+        continue
+      if selected < 180:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_DOWN:
+      if selected == 180:
+        continue
+      if selected < 180:
+        selected += 10
+      else:
+        selected -= 10
+
+    if selected == 360:
+      selected = 0
+    elif selected == -10:
+      selected = 350
+
+  for trial in range(0, 10):
+    for index in range(5, -1, -1):
+      countdown = "Ping in {}".format(index)
+      stdscr.addstr(
+        center_y/2 + int(math.ceil(len(text)/2)) + 1, 
+        center_x/2 - int(math.ceil(len(countdown)/2)),
+        countdown
+      )
+      stdscr.refresh()
+      sleep(1)
+
+    stdscr.refresh()
+
+    source = random.randrange(0, 360, 10)
+
+    trial_3_source.append(source)
+
+    stereo = convolve_stereo(data[:, 0], hrtf, 0, source)
+    sd.play(stereo, fs)
+    sd.wait()
+
+    while True:
+      for deg in range(0, 360, 10):
+        add_circle_point(
+          stdscr, 
+          str(deg), 
+          deg,
+          min(center_y, center_x)/2,
+          curses.A_REVERSE if deg == selected else curses.A_NORMAL
+        )
+
+      ch = stdscr.getch()
+      
+      if ch == curses.KEY_ENTER or ch == ord('\r') or ch == ord('\n'):
+        break
+
+      elif ch == curses.KEY_RIGHT:
+        if selected == 90:
+          continue
+        elif selected > 270 or selected < 90:
+          selected += 10
+        else:
+          selected -= 10
+
+      elif ch == curses.KEY_LEFT:
+        if selected == 270:
+          continue
+        if selected > 270 or selected < 90:
+          selected -= 10
+        else:
+          selected += 10
+
+      elif ch == curses.KEY_UP:
+        if selected == 0:
+          continue
+        if selected < 180:
+          selected -= 10
+        else:
+          selected += 10
+
+      elif ch == curses.KEY_DOWN:
+        if selected == 180:
+          continue
+        if selected < 180:
+          selected += 10
+        else:
+          selected -= 10
+
+      if selected == 360:
+        selected = 0
+      elif selected == -10:
+        selected = 350
+
+    trial_3_resp.append(selected)
+
+  #############################################################################
+  #
+  # Results
+  #
+  #############################################################################
+  
+  stdscr.clear()
+
+  set_1_avg = float()
+  set_2_avg = float()
+  set_3_avg = float()
+
+  for index in range(0, 10):
+    set_1_avg += (math.cos(abs(trial_1_resp[index] - trial_1_source[index])) + 1)/2
+    set_2_avg += (math.cos(abs(trial_2_resp[index] - trial_2_source[index])) + 1)/2
+    set_3_avg += (math.cos(abs(trial_3_resp[index] - trial_3_source[index])) + 1)/2
+
+  set_1_avg *= 10
+  set_2_avg *= 10
+  set_3_avg *= 10
+
+  text = list()
+  text.append("Game Over!")
+  text.append("Set 1 results: {0:.2f}% Accuracy".format(set_1_avg))
+  text.append("Set 2 results: {0:.2f}% Accuracy".format(set_2_avg))
+  text.append("Set 3 results: {0:.2f}% Accuracy".format(set_3_avg))
+
+  for index, line in enumerate(text):
+    stdscr.addstr(
+      center_y/2 - int(math.ceil(len(text)/2)) + index,
+      center_x/2 - int(math.ceil(len(line)/2)),
+      line
+    )
+
+  ready = "Finished? "
+  stdscr.addstr(
+    center_y/2 + int(math.ceil(len(text)/2)) + 1, 
+    center_x/2 - int(math.ceil(len(ready)/2)),
+    ready 
+  )
+  enter = "[ENTER]"
+  stdscr.addstr(
+    center_y/2 + int(math.ceil(len(text)/2)) + 1, 
+    center_x/2 + int(math.ceil(len(ready)/2)),
+    enter,
+    curses.A_BLINK | curses.A_REVERSE
+  )
+
+  while True:
+    for deg in range(0, 360, 10):
+        add_circle_point(
+          stdscr, 
+          str(deg), 
+          deg,
+          min(center_y, center_x)/2,
+          curses.A_REVERSE if deg == selected else curses.A_NORMAL
+        )
+
+    ch = stdscr.getch()
+    
+    if ch == curses.KEY_ENTER or ch == ord('\r') or ch == ord('\n'):
+      enter_clear = "       "
+      stdscr.addstr(
+        center_y/2 + int(math.ceil(len(text)/2)) + 1, 
+        center_x/2 + int(math.ceil(len(ready)/2)),
+        enter_clear,
+        curses.A_NORMAL
+      )
+      break
+
+    elif ch == curses.KEY_RIGHT:
+      if selected == 90:
+        continue
+      elif selected > 270 or selected < 90:
+        selected += 10
+      else:
+        selected -= 10
+
+    elif ch == curses.KEY_LEFT:
+      if selected == 270:
+        continue
+      if selected > 270 or selected < 90:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_UP:
+      if selected == 0:
+        continue
+      if selected < 180:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_DOWN:
+      if selected == 180:
+        continue
+      if selected < 180:
+        selected += 10
+      else:
+        selected -= 10
+
+    if selected == 360:
+      selected = 0
+    elif selected == -10:
+      selected = 350
 
   f = open("res.csv", "w")
   for index in range(0, 10):
-    f.write("{},{}\n".format(trial_1_resp[index], trial_1_source[index]))
+    f.write("{},{},{},{},{},{}\n".format(trial_1_resp[index], trial_1_source[index], trial_2_resp[index], trial_2_source[index], trial_3_resp[index], trial_3_source[index]))
   f.close()
   curses.endwin()
 
