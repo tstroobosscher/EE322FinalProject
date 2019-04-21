@@ -143,7 +143,7 @@ def convolve_stereo(data, hrtf, elevation, azimuth):
   )
   right = fftconvolve(
   	data, 
-  	hrtf['R'][actual_elevation][actual_azimuth]
+  	hrtf['L'][actual_elevation][360 - actual_azimuth]
   )
   stereo = np.transpose([left, right])
   return stereo
@@ -152,7 +152,7 @@ def main():
   print "Hello World!"
   hrtf = load_hrtf()
   data, fs = sf.read("dryspeech.wav")
-  stereo = convolve_stereo(data, hrtf, 90, 48)
+  stereo = convolve_stereo(data, hrtf, 90, 270)
   sd.play(stereo, fs)
   sd.wait()
 
