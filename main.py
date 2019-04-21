@@ -13,6 +13,9 @@ import wave
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
+import curses
+import math
+import random
 
 def read_dat(side, elevation, azimuth):
   """
@@ -148,12 +151,219 @@ def convolve_stereo(data, hrtf, elevation, azimuth):
   stereo = np.transpose([left, right])
   return stereo
 
-def main():
-  hrtf = load_hrtf()
-  data, fs = sf.read("dryspeech.wav")
-  stereo = convolve_stereo(data, hrtf, 0, 270)
-  sd.play(stereo, fs)
-  sd.wait()
+def add_circle_point(window, text, degrees, radius, attribute):
+  center_y = window.getmaxyx()[0]
+  center_x = window.getmaxyx()[1]
+  seg_length = radius
+  window.addstr(
+    center_y/2 - int(seg_length * math.cos(math.pi/180 * degrees)), 
+    center_x/2 - len(text)/2 + int(2 * seg_length * math.sin(math.pi/180 * degrees)), 
+    text,
+    attribute
+  )
 
-if __name__ == "__main__":
-  main()
+def main(stdscr):
+  hrtf = load_hrtf()
+  data, fs = sf.read("ping.wav")
+
+  stdscr.clear()
+  curses.curs_set(0)
+  curses.cbreak()
+
+  trial_1_source = list()
+  trial_1_resp = list()
+
+  selected = 0
+
+  center_y = stdscr.getmaxyx()[0]
+  center_x = stdscr.getmaxyx()[1]
+
+  curses.init_pair(1, curses.COLOR_RED, 0)
+
+  #############################################################################
+  #
+  # Part 1 - Ping from random locations, record results
+  #
+  #############################################################################
+
+  text = list()
+  text.append("Welcome to our EE322 final project!")
+  text.append("Move cursor with the arrow keys")
+  text.append("0 degrees is directly in front of you")
+  text.append("180 degrees is directly behind you")
+  text.append("Locate the direction of the ping as best you can")
+  text.append("Press 'Enter' when you are done")
+
+  for index, line in enumerate(text):
+    stdscr.addstr(
+      center_y/2 - len(text)/2 + index, 
+      center_x/2 - len(line)/2, 
+      line
+    )
+
+  ready = "Ready? "
+  stdscr.addstr(
+    center_y/2 + len(text)/2, 
+    center_x/2 - len(ready)/2,
+    ready 
+  )
+  enter = "[ENTER]"
+  stdscr.addstr(
+    center_y/2 + len(text)/2, 
+    center_x/2 + len(ready)/2,
+    enter,
+    curses.A_BLINK | curses.A_REVERSE
+  )
+
+  while True:
+    for deg in range(0, 360, 10):
+        add_circle_point(
+          stdscr, 
+          str(deg), 
+          deg,
+          min(center_y, center_x)/2,
+          curses.A_REVERSE if deg == selected else curses.A_NORMAL
+        )
+
+    ch = stdscr.getch()
+    
+    if ch == curses.KEY_ENTER or ch == ord('\r') or ch == ord('\n'):
+      enter_clear = "       "
+      stdscr.addstr(
+        center_y/2 + len(text)/2, 
+        center_x/2 + len(ready)/2,
+        enter_clear,
+        curses.A_NORMAL
+      )
+      break
+
+    elif ch == curses.KEY_RIGHT:
+      if selected == 90:
+        continue
+      elif selected > 270 or selected < 90:
+        selected += 10
+      else:
+        selected -= 10
+
+    elif ch == curses.KEY_LEFT:
+      if selected == 270:
+        continue
+      if selected > 270 or selected < 90:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_UP:
+      if selected == 0:
+        continue
+      if selected < 180:
+        selected -= 10
+      else:
+        selected += 10
+
+    elif ch == curses.KEY_DOWN:
+      if selected == 180:
+        continue
+      if selected < 180:
+        selected += 10
+      else:
+        selected -= 10
+
+    if selected == 360:
+      selected = 0
+    elif selected == -10:
+      selected = 350
+
+  for trial in range(0, 10):
+    for index in range(5, -1, -1):
+      countdown = "Ping in {}".format(index)
+      stdscr.addstr(
+        center_y/2 + len(text)/2, 
+        center_x/2 - len(countdown)/2, 
+        countdown
+      )
+      stdscr.refresh()
+      sleep(1)
+
+    stdscr.refresh()
+
+    source = random.randrange(0, 360, 10)
+
+    trial_1_source.append(source)
+
+    stereo = convolve_stereo(data[:, 0], hrtf, 0, source)
+    sd.play(stereo, fs)
+    sd.wait()
+
+    while True:
+      for deg in range(0, 360, 10):
+        add_circle_point(
+          stdscr, 
+          str(deg), 
+          deg,
+          min(center_y, center_x)/2,
+          curses.A_REVERSE if deg == selected else curses.A_NORMAL
+        )
+
+      ch = stdscr.getch()
+      
+      if ch == curses.KEY_ENTER or ch == ord('\r') or ch == ord('\n'):
+        break
+
+      elif ch == curses.KEY_RIGHT:
+        if selected == 90:
+          continue
+        elif selected > 270 or selected < 90:
+          selected += 10
+        else:
+          selected -= 10
+
+      elif ch == curses.KEY_LEFT:
+        if selected == 270:
+          continue
+        if selected > 270 or selected < 90:
+          selected -= 10
+        else:
+          selected += 10
+
+      elif ch == curses.KEY_UP:
+        if selected == 0:
+          continue
+        if selected < 180:
+          selected -= 10
+        else:
+          selected += 10
+
+      elif ch == curses.KEY_DOWN:
+        if selected == 180:
+          continue
+        if selected < 180:
+          selected += 10
+        else:
+          selected -= 10
+
+      if selected == 360:
+        selected = 0
+      elif selected == -10:
+        selected = 350
+
+    trial_1_resp.append(selected)
+
+    # add_circle_point(
+    #   stdscr, 
+    #   "*", 
+    #   90, 
+    #   min(center_y, center_x)/2 - 2, 
+    #   curses.color_pair(1)
+    # )
+
+  f = open("res.csv", "w")
+  for index in range(0, 10):
+    f.write("{},{}\n".format(trial_1_resp[index], trial_1_source[index]))
+  f.close()
+  curses.endwin()
+
+curses.wrapper(main)
+
+# if __name__ == '__main__':
+#   main()
