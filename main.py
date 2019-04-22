@@ -910,7 +910,14 @@ def main(stdscr):
 
   f = open("res.csv", "w")
   for index in range(0, 10):
-    f.write("{},{},{},{},{},{}\n".format(trial_1_resp[index], trial_1_source[index], trial_2_resp[index], trial_2_source[index], trial_3_resp[index], trial_3_source[index]))
+    f.write("{},{},{},{},{},{}\n".format(
+      trial_1_resp[index], 
+      trial_1_source[index], 
+      trial_2_resp[index], 
+      trial_2_source[index], 
+      trial_3_resp[index], 
+      trial_3_source[index]
+    ))
   f.close()
   curses.endwin()
 
