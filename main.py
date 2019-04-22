@@ -542,17 +542,6 @@ def main(stdscr):
       selected = 350
 
   for trial in range(0, 10):
-    for index in range(5, -1, -1):
-      countdown = "Ping in {}".format(index)
-      stdscr.addstr(
-        center_y/2 + int(math.ceil(len(text)/2)), 
-        center_x/2 - int(math.ceil(len(countdown)/2)), 
-        countdown
-      )
-      stdscr.refresh()
-      sleep(1)
-
-    stdscr.refresh()
 
     source = random.randrange(0, 360, 10)
 
@@ -566,6 +555,16 @@ def main(stdscr):
       curses.color_pair(1)
     )
     stdscr.refresh()
+
+    for index in range(5, -1, -1):
+      countdown = "Ping in {}".format(index)
+      stdscr.addstr(
+        center_y/2 + int(math.ceil(len(text)/2)), 
+        center_x/2 - int(math.ceil(len(countdown)/2)), 
+        countdown
+      )
+      stdscr.refresh()
+      sleep(1)
 
     stereo = convolve_stereo(data[:, 0], hrtf, 0, source)
     sd.play(stereo, fs)
