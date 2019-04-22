@@ -7,6 +7,7 @@
 from struct import unpack
 from scipy.io import wavfile
 from scipy.signal import fftconvolve
+from numpy import convolve
 from time import sleep
 import os
 import wave
@@ -140,11 +141,11 @@ def convolve_stereo(data, hrtf, elevation, azimuth):
   	azimuth
   )
 
-  left = fftconvolve(
+  left = convolve(
   	data, 
   	hrtf['L'][actual_elevation][actual_azimuth]
   )
-  right = fftconvolve(
+  right = convolve(
   	data, 
   	hrtf['L'][actual_elevation][0 if actual_azimuth is 0 else 360 - actual_azimuth]
   )
@@ -183,6 +184,11 @@ def main(stdscr):
   center_x = stdscr.getmaxyx()[1]
 
   curses.init_pair(1, curses.COLOR_RED, 0)
+
+  directions = list()
+
+  for item in range(0, 10):
+    directions.append(random.randrange(0, 360, 10))
 
   #############################################################################
   #
@@ -383,12 +389,10 @@ def main(stdscr):
 
     stdscr.refresh()
 
-    source = random.randrange(0, 360, 10)
+    trial_1_source.append(directions[trial])
 
-    trial_1_source.append(source)
-
-    stereo = convolve_stereo(data[:, 0], hrtf, 0, source)
-    sd.play(stereo, fs)
+    stereo = convolve_stereo(data[:, 0], hrtf, 0, directions[trial])
+    sd.play(stereo, fs, blocking=False)
     sd.wait()
 
     while True:
@@ -543,14 +547,12 @@ def main(stdscr):
 
   for trial in range(0, 10):
 
-    source = random.randrange(0, 360, 10)
-
-    trial_2_source.append(source)
+    trial_2_source.append(directions[trial])
 
     add_circle_point(
       stdscr, 
       "*", 
-      source, 
+      directions[trial], 
       min(center_y, center_x)/2 - 2, 
       curses.color_pair(1)
     )
@@ -566,7 +568,7 @@ def main(stdscr):
       stdscr.refresh()
       sleep(1)
 
-    stereo = convolve_stereo(data[:, 0], hrtf, 0, source)
+    stereo = convolve_stereo(data[:, 0], hrtf, 0, directions[trial])
     sd.play(stereo, fs)
     sd.wait()
 
@@ -627,7 +629,7 @@ def main(stdscr):
     add_circle_point(
       stdscr, 
       " ", 
-      source, 
+      directions[trial], 
       min(center_y, center_x)/2 - 2,
       curses.A_NORMAL
     )
@@ -739,11 +741,9 @@ def main(stdscr):
 
     stdscr.refresh()
 
-    source = random.randrange(0, 360, 10)
+    trial_3_source.append(directions[trial])
 
-    trial_3_source.append(source)
-
-    stereo = convolve_stereo(data[:, 0], hrtf, 0, source)
+    stereo = convolve_stereo(data[:, 0], hrtf, 0, directions[trial])
     sd.play(stereo, fs)
     sd.wait()
 
@@ -814,9 +814,9 @@ def main(stdscr):
   set_3_avg = float()
 
   for index in range(0, 10):
-    set_1_avg += (math.cos(abs(trial_1_resp[index] - trial_1_source[index])) + 1)/2
-    set_2_avg += (math.cos(abs(trial_2_resp[index] - trial_2_source[index])) + 1)/2
-    set_3_avg += (math.cos(abs(trial_3_resp[index] - trial_3_source[index])) + 1)/2
+    set_1_avg += (math.cos(math.pi / 180 * abs(trial_1_resp[index] - trial_1_source[index])) + 1)/2
+    set_2_avg += (math.cos(math.pi / 180 * abs(trial_2_resp[index] - trial_2_source[index])) + 1)/2
+    set_3_avg += (math.cos(math.pi / 180 * abs(trial_3_resp[index] - trial_3_source[index])) + 1)/2
 
   set_1_avg *= 10
   set_2_avg *= 10
