@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-f = open("tommy2.csv", "r")
+f = open("tommy1.csv", "r")
 
 mat = np.loadtxt(f, delimiter=",")
 
