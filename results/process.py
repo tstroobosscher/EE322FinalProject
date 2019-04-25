@@ -1,7 +1,8 @@
 import numpy as np
 import math
+import sys
 
-f = open("tommy1.csv", "r")
+f = open(sys.argv[1], "r")
 
 mat = np.loadtxt(f, delimiter=",")
 
